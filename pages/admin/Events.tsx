@@ -13,7 +13,7 @@ import {
   Lock, Shield, RotateCcw, Code, Palette, Terminal, Megaphone, Webhook, Key,
   MousePointerClick, Ticket, AlignLeft, CheckSquare, Radio, 
   CalendarDays, Tag, AlertTriangle, ArrowUpRight, Compass,
-  DoorOpen, Presentation, Utensils, Accessibility
+  DoorOpen, Presentation, Utensils, Accessibility, CloudSun, Timer, BellRing
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder, useDragControls } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '../../components/ui/Card';
@@ -65,6 +65,7 @@ import {
 } from "../../components/ui/Table";
 import { formatCurrency, cn, getInitials } from '../../lib/utils';
 import { Link } from 'react-router-dom';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 // --- Types & Mock Data ---
 
@@ -216,13 +217,16 @@ const INITIAL_EVENTS: ConferenceEvent[] = [
     id: 'evt-1',
     name: 'Global Impact Conference 2025',
     slug: 'global-impact-2025',
+    description: 'The annual gathering of humanitarian leaders, innovators, and boots-on-the-ground partners.',
     startDate: '2025-10-15',
     endDate: '2025-10-17',
+    startTime: '08:00',
     location: 'Denver Convention Center, CO',
     status: 'Published',
     registrants: 450,
     capacity: 1200,
     revenue: 112500,
+    goalRevenue: 250000,
     image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=2000',
     fundCode: 'CONF-25',
     tracks: [
@@ -311,421 +315,310 @@ const getDuration = (start: string, end: string) => {
 
 // --- Sub-Components ---
 
-const SpeakerDialog = ({ 
-  open, 
-  onOpenChange, 
-  speaker, 
-  onSave 
-}: { 
-  open: boolean; 
-  onOpenChange: (open: boolean) => void; 
-  speaker?: Speaker; 
-  onSave: (s: Speaker) => void; 
-}) => {
-  const [formData, setFormData] = useState<Partial<Speaker>>({});
+// NEW: Event Overview Component
+const EventOverview = ({ event }: { event: ConferenceEvent }) => {
+    // Mock Data for Charts
+    const registrationData = [
+        { name: 'Jan', value: 20 },
+        { name: 'Feb', value: 45 },
+        { name: 'Mar', value: 80 },
+        { name: 'Apr', value: 120 },
+        { name: 'May', value: 190 },
+        { name: 'Jun', value: 250 },
+        { name: 'Jul', value: 320 },
+        { name: 'Aug', value: 380 },
+        { name: 'Sep', value: 450 },
+    ];
 
-  React.useEffect(() => {
-    if (open) {
-      setFormData(speaker || {
-        firstName: '',
-        lastName: '',
-        email: '',
-        jobTitle: '',
-        company: '',
-        bio: '',
-        status: 'Invited',
-        avatar: ''
-      });
-    }
-  }, [open, speaker]);
+    const ticketDistribution = [
+        { name: 'General', value: 300, color: '#3b82f6' }, // Blue
+        { name: 'VIP', value: 50, color: '#a855f7' }, // Purple
+        { name: 'Speaker', value: 20, color: '#f59e0b' }, // Amber
+        { name: 'Volunteer', value: 80, color: '#10b981' }, // Emerald
+    ];
 
-  const handleSubmit = () => {
-    onSave({
-      id: speaker?.id || `spk-${Date.now()}`,
-      eventId: speaker?.eventId || 'evt-1',
-      avatar: formData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${formData.firstName}`,
-      firstName: formData.firstName || '',
-      lastName: formData.lastName || '',
-      email: formData.email || '',
-      jobTitle: formData.jobTitle || '',
-      company: formData.company || '',
-      bio: formData.bio || '',
-      status: (formData.status as SpeakerStatus) || 'Invited',
-      sessions: formData.sessions || []
-    });
-    onOpenChange(false);
-  };
+    const upcomingSessions = event.sessions
+        .sort((a, b) => a.startTime.localeCompare(b.startTime))
+        .slice(0, 3);
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>{speaker ? 'Edit Speaker' : 'Add Speaker'}</DialogTitle>
-          <DialogDescription>Speaker details and bio.</DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>First Name</Label>
-              <Input value={formData.firstName || ''} onChange={e => setFormData({...formData, firstName: e.target.value})} />
-            </div>
-            <div className="space-y-2">
-              <Label>Last Name</Label>
-              <Input value={formData.lastName || ''} onChange={e => setFormData({...formData, lastName: e.target.value})} />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>Email</Label>
-            <Input value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Job Title</Label>
-              <Input value={formData.jobTitle || ''} onChange={e => setFormData({...formData, jobTitle: e.target.value})} />
-            </div>
-            <div className="space-y-2">
-              <Label>Company</Label>
-              <Input value={formData.company || ''} onChange={e => setFormData({...formData, company: e.target.value})} />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>Bio</Label>
-            <Textarea value={formData.bio || ''} onChange={e => setFormData({...formData, bio: e.target.value})} />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} className="bg-slate-900 text-white">Save Speaker</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-const ScheduleManager = ({ event, speakers, onUpdateSession }: { event: ConferenceEvent; speakers: Speaker[]; onUpdateSession: (s: Session) => void }) => {
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-bold text-slate-900">Session Schedule</h3>
-        <Button size="sm" variant="outline"><Plus className="h-4 w-4 mr-2" /> Add Session</Button>
-      </div>
-      <div className="space-y-4">
-        {event.sessions.map(session => {
-          const room = event.rooms.find(r => r.id === session.locationId);
-          const track = event.tracks.find(t => t.id === session.trackId);
-          return (
-            <Card key={session.id} className="border-slate-200 shadow-sm">
-              <CardContent className="p-4 flex gap-4">
-                <div className="w-32 flex flex-col justify-center text-center border-r border-slate-100 pr-4">
-                  <div className="text-sm font-bold text-slate-900">{formatTime(session.startTime)}</div>
-                  <div className="text-xs text-slate-500">{formatTime(session.endTime)}</div>
+    return (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            
+            {/* Top Status Bar */}
+            <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between bg-gradient-to-r from-slate-900 to-slate-800 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                    <CalendarIcon className="w-64 h-64 -rotate-12" />
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-bold text-slate-900">{session.title}</h4>
-                    {track && <Badge variant="secondary" className={cn("text-[10px] h-5", track.color)}>{track.name}</Badge>}
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-slate-500">
-                    <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {room?.name || 'TBD'}</span>
-                    <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {session.speakerIds.length} Speakers</span>
-                  </div>
+                
+                <div className="relative z-10 flex gap-6 items-center">
+                    <div className="bg-white/10 p-4 rounded-xl backdrop-blur-sm border border-white/10">
+                        <Timer className="h-8 w-8 text-blue-400" />
+                    </div>
+                    <div>
+                        <h2 className="text-sm font-semibold text-blue-200 uppercase tracking-wider mb-1">Event Status</h2>
+                        <div className="flex items-baseline gap-3">
+                            <span className="text-3xl font-bold tracking-tight">{event.status === 'Published' ? '45 Days to Go' : 'Live Now'}</span>
+                            <Badge className="bg-emerald-500 text-white hover:bg-emerald-600 border-none">On Schedule</Badge>
+                        </div>
+                    </div>
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8 self-center"><MoreHorizontal className="h-4 w-4" /></Button>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
 
-const RegistrationFormBuilder = () => {
-  const [fields, setFields] = useState<FormField[]>(DEFAULT_FORM_FIELDS);
-
-  return (
-    <div className="flex h-[600px] border rounded-xl overflow-hidden bg-white shadow-sm">
-      <div className="w-64 bg-slate-50 border-r border-slate-200 p-4 space-y-4">
-        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Form Elements</h3>
-        <div className="grid grid-cols-2 gap-2">
-          {['Text', 'Email', 'Number', 'Select', 'Checkbox', 'Radio', 'Date', 'File'].map(type => (
-            <Button key={type} variant="outline" size="sm" className="justify-start text-xs bg-white h-8">
-              {type}
-            </Button>
-          ))}
-        </div>
-      </div>
-      <div className="flex-1 p-8 bg-slate-100/50 overflow-y-auto">
-        <div className="max-w-xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-slate-200 space-y-6">
-          <div className="text-center border-b border-slate-100 pb-6">
-            <h2 className="text-2xl font-bold text-slate-900">Register for Event</h2>
-            <p className="text-slate-500 mt-2">Please fill out your details below.</p>
-          </div>
-          {fields.map(field => (
-            <div key={field.id} className="space-y-2 group relative hover:ring-1 hover:ring-blue-100 p-2 rounded-lg -mx-2 transition-all">
-              <Label className="flex gap-1">
-                {field.label} {field.required && <span className="text-red-500">*</span>}
-              </Label>
-              {field.type === 'textarea' ? (
-                <Textarea placeholder={field.placeholder} />
-              ) : field.type === 'select' ? (
-                <Select><option>Select...</option></Select>
-              ) : (
-                <Input type={field.type} placeholder={field.placeholder} />
-              )}
-              {field.helpText && <p className="text-xs text-slate-500">{field.helpText}</p>}
-              <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100">
-                <Button variant="ghost" size="icon" className="h-6 w-6"><Settings className="h-3 w-3" /></Button>
-              </div>
+                <div className="relative z-10 flex items-center gap-8 border-t md:border-t-0 md:border-l border-white/10 pt-4 md:pt-0 md:pl-8 mt-4 md:mt-0 w-full md:w-auto">
+                    <div>
+                        <div className="flex items-center gap-2 text-slate-300 text-sm mb-1">
+                            <CloudSun className="h-4 w-4" /> Denver, CO
+                        </div>
+                        <div className="font-semibold text-lg">72°F Sunny</div>
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2 text-slate-300 text-sm mb-1">
+                             <MapPin className="h-4 w-4" /> Venue
+                        </div>
+                        <div className="font-semibold text-lg">Convention Ctr.</div>
+                    </div>
+                </div>
             </div>
-          ))}
-          <Button className="w-full bg-slate-900 text-white">Register Now</Button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
-const EventSettings = ({ event }: { event: ConferenceEvent }) => {
-  return (
-    <div className="max-w-2xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <Card>
-        <CardHeader>
-          <CardTitle>General Settings</CardTitle>
-          <CardDescription>Basic event information and visibility.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Event Name</Label>
-            <Input defaultValue={event.name} />
-          </div>
-          <div className="space-y-2">
-            <Label>Event Slug</Label>
-            <div className="flex">
-              <span className="bg-slate-100 border border-r-0 border-slate-300 rounded-l-md px-3 flex items-center text-slate-500 text-sm">events/</span>
-              <Input className="rounded-l-none" defaultValue={event.slug} />
+            {/* KPI Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="shadow-sm hover:shadow-md transition-shadow border-slate-200">
+                    <CardContent className="p-6">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Registrants</p>
+                                <h3 className="text-3xl font-bold text-slate-900 mt-2">{event.registrants}</h3>
+                                <p className="text-xs text-slate-500 mt-1">
+                                    <span className="text-emerald-600 font-medium">↑ 12%</span> vs last week
+                                </p>
+                            </div>
+                            <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
+                                <Users className="h-5 w-5" />
+                            </div>
+                        </div>
+                        <Progress value={(event.registrants / event.capacity) * 100} className="h-1.5 mt-4" />
+                    </CardContent>
+                </Card>
+
+                <Card className="shadow-sm hover:shadow-md transition-shadow border-slate-200">
+                    <CardContent className="p-6">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Gross Revenue</p>
+                                <h3 className="text-3xl font-bold text-slate-900 mt-2">{formatCurrency(event.revenue)}</h3>
+                                <p className="text-xs text-slate-500 mt-1">
+                                    Goal: {formatCurrency(event.goalRevenue)}
+                                </p>
+                            </div>
+                            <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600">
+                                <DollarSign className="h-5 w-5" />
+                            </div>
+                        </div>
+                        <Progress value={(event.revenue / (event.goalRevenue || 1)) * 100} className="h-1.5 mt-4 bg-emerald-100" />
+                    </CardContent>
+                </Card>
+
+                <Card className="shadow-sm hover:shadow-md transition-shadow border-slate-200">
+                    <CardContent className="p-6">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Check-In Rate</p>
+                                <h3 className="text-3xl font-bold text-slate-900 mt-2">32%</h3>
+                                <p className="text-xs text-slate-500 mt-1">
+                                    142 Arrived
+                                </p>
+                            </div>
+                            <div className="p-2 bg-purple-50 rounded-lg text-purple-600">
+                                <ScanLine className="h-5 w-5" />
+                            </div>
+                        </div>
+                        <Progress value={32} className="h-1.5 mt-4 bg-purple-100" />
+                    </CardContent>
+                </Card>
+
+                <Card className="shadow-sm hover:shadow-md transition-shadow border-slate-200 bg-slate-50 border-dashed flex flex-col justify-center items-center cursor-pointer group">
+                     <div className="h-12 w-12 rounded-full bg-white shadow-sm flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                        <QrCode className="h-6 w-6 text-slate-900" />
+                     </div>
+                     <span className="font-semibold text-slate-900 text-sm">Launch Kiosk</span>
+                </Card>
             </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Public Visibility</Label>
-              <p className="text-xs text-slate-500">Make this event visible on the public portal.</p>
+
+            {/* Main Content Area */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                {/* Left Column: Charts & Trends */}
+                <div className="lg:col-span-2 space-y-8">
+                    <Card className="border-slate-200 shadow-sm">
+                        <CardHeader>
+                            <CardTitle>Registration Trends</CardTitle>
+                            <CardDescription>Cumulative sign-ups over time.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="pl-0">
+                            <div className="h-[300px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={registrationData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="colorReg" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                            </linearGradient>
+                                        </defs>
+                                        <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} stroke="#94a3b8" />
+                                        <YAxis fontSize={12} tickLine={false} axisLine={false} stroke="#94a3b8" />
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                        <Tooltip 
+                                            contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                        />
+                                        <Area type="monotone" dataKey="value" stroke="#3b82f6" fillOpacity={1} fill="url(#colorReg)" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                         {/* Ticket Breakdown */}
+                         <Card className="border-slate-200 shadow-sm h-full">
+                            <CardHeader>
+                                <CardTitle className="text-sm font-bold uppercase text-slate-500 tracking-wider">Ticket Distribution</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="h-[200px] w-full relative">
+                                     <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie 
+                                                data={ticketDistribution} 
+                                                innerRadius={60} 
+                                                outerRadius={80} 
+                                                paddingAngle={5} 
+                                                dataKey="value"
+                                            >
+                                                {ticketDistribution.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip />
+                                        </PieChart>
+                                     </ResponsiveContainer>
+                                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                        <span className="text-3xl font-bold text-slate-900">{event.registrants}</span>
+                                        <span className="text-xs text-slate-400 font-medium">Total</span>
+                                     </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 mt-4">
+                                    {ticketDistribution.map((item) => (
+                                        <div key={item.name} className="flex items-center gap-2 text-xs">
+                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                                            <span className="text-slate-600 font-medium">{item.name}</span>
+                                            <span className="text-slate-400 ml-auto">{item.value}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                         </Card>
+                         
+                         {/* Needs Attention */}
+                         <Card className="border-red-100 bg-red-50/30 shadow-sm h-full">
+                            <CardHeader>
+                                <CardTitle className="text-sm font-bold uppercase text-red-600 tracking-wider flex items-center gap-2">
+                                    <AlertTriangle className="h-4 w-4" /> Needs Attention
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="bg-white p-3 rounded-lg border border-red-100 shadow-sm flex gap-3 items-start">
+                                    <div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 shrink-0" />
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-900">3 VIPs Missing Info</p>
+                                        <p className="text-xs text-slate-500 mt-0.5">Flight details pending for keynote speakers.</p>
+                                        <Button variant="link" className="p-0 h-auto text-xs text-red-600 mt-2">View List</Button>
+                                    </div>
+                                </div>
+                                <div className="bg-white p-3 rounded-lg border border-red-100 shadow-sm flex gap-3 items-start">
+                                    <div className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-900">Catering Adjustment</p>
+                                        <p className="text-xs text-slate-500 mt-0.5">15 new gluten-free requests added today.</p>
+                                    </div>
+                                </div>
+                            </CardContent>
+                         </Card>
+                    </div>
+                </div>
+
+                {/* Right Column: Schedule & Activity */}
+                <div className="space-y-6">
+                    
+                    {/* On Deck */}
+                    <Card className="border-slate-200 shadow-sm bg-slate-900 text-white">
+                        <CardHeader>
+                            <CardTitle className="text-white flex items-center gap-2">
+                                <Clock className="h-5 w-5 text-blue-400" /> On Deck
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="relative pl-4 border-l-2 border-slate-700/50 space-y-6">
+                                {upcomingSessions.map((session, i) => (
+                                    <div key={session.id} className="relative">
+                                        <div className={cn("absolute -left-[21px] top-1 h-3 w-3 rounded-full border-2 border-slate-900", i === 0 ? "bg-emerald-500 animate-pulse" : "bg-slate-600")} />
+                                        <p className="text-xs font-mono text-slate-400 mb-1">{formatTime(session.startTime)}</p>
+                                        <p className="font-bold text-sm leading-tight">{session.title}</p>
+                                        <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                                            <MapPin className="h-3 w-3" /> {event.rooms.find(r => r.id === session.locationId)?.name || 'TBD'}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                            <Button variant="outline" className="w-full border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">
+                                View Full Schedule
+                            </Button>
+                        </CardContent>
+                    </Card>
+
+                    {/* Quick Actions */}
+                    <Card className="border-slate-200 shadow-sm">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-sm font-bold text-slate-500 uppercase tracking-wider">Quick Actions</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                             <Button variant="outline" className="w-full justify-start text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-slate-200 h-10">
+                                 <Mail className="h-4 w-4 mr-2" /> Blast Notification
+                             </Button>
+                             <Button variant="outline" className="w-full justify-start text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-slate-200 h-10">
+                                 <UserPlus className="h-4 w-4 mr-2" /> Add Walk-in Attendee
+                             </Button>
+                             <Button variant="outline" className="w-full justify-start text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-slate-200 h-10">
+                                 <Download className="h-4 w-4 mr-2" /> Export Check-in List
+                             </Button>
+                        </CardContent>
+                    </Card>
+
+                    {/* Recent Activity */}
+                    <Card className="border-slate-200 shadow-sm">
+                         <CardHeader className="pb-3">
+                            <CardTitle className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                <BellRing className="h-4 w-4" /> Live Feed
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {[1,2,3].map(i => (
+                                <div key={i} className="flex gap-3 items-start">
+                                    <Avatar className="h-8 w-8 mt-0.5 border border-slate-100">
+                                        <AvatarFallback className="text-[10px] bg-slate-100 text-slate-500">JD</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <p className="text-xs text-slate-900"><span className="font-bold">John Doe</span> checked in at registration.</p>
+                                        <p className="text-[10px] text-slate-400 mt-0.5">2 minutes ago</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </CardContent>
+                    </Card>
+
+                </div>
+
             </div>
-            <Switch checked={event.status === 'Published'} />
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card className="border-red-100">
-        <CardHeader>
-          <CardTitle className="text-red-900">Danger Zone</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-red-900">Delete Event</p>
-              <p className="text-xs text-red-700">This action cannot be undone.</p>
-            </div>
-            <Button variant="destructive" size="sm">Delete</Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
-
-const CheckInKiosk = ({ onClose }: { onClose: () => void }) => {
-  const [search, setSearch] = useState('');
-  
-  return (
-    <div className="fixed inset-0 z-50 bg-white flex flex-col">
-      <div className="h-16 border-b flex items-center justify-between px-6 shrink-0">
-        <div className="font-bold text-xl flex items-center gap-2">
-          <ScanLine className="h-6 w-6 text-blue-600" /> Kiosk Mode
         </div>
-        <Button variant="ghost" onClick={onClose}>Exit Kiosk</Button>
-      </div>
-      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-50">
-        <div className="w-full max-w-2xl space-y-8">
-          <div className="text-center space-y-2">
-            <h1 className="text-4xl font-bold text-slate-900">Welcome to Global Impact 2025</h1>
-            <p className="text-slate-500 text-lg">Search for your name or scan your QR code to check in.</p>
-          </div>
-          <Card className="shadow-xl border-slate-200">
-            <CardContent className="p-8 space-y-6">
-              <div className="relative">
-                <Search className="absolute left-4 top-4 h-6 w-6 text-slate-400" />
-                <Input 
-                  className="pl-12 h-14 text-lg bg-slate-50 border-slate-200" 
-                  placeholder="Start typing your name..."
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  autoFocus
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <Button className="h-32 flex flex-col gap-2 bg-blue-600 hover:bg-blue-700 text-white text-lg">
-                  <QrCode className="h-10 w-10" />
-                  Scan QR Code
-                </Button>
-                <Button variant="outline" className="h-32 flex flex-col gap-2 bg-white hover:bg-slate-50 text-slate-900 text-lg border-2">
-                  <User className="h-10 w-10" />
-                  Manual Check-In
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const EventCard = ({ event, onClick }: { event: ConferenceEvent; onClick: () => void }) => (
-  <Card className="overflow-hidden cursor-pointer hover:shadow-md transition-all group" onClick={onClick}>
-    <div className="aspect-video w-full overflow-hidden bg-slate-100 relative">
-      <img 
-        src={event.image} 
-        alt={event.name} 
-        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
-      />
-      <div className="absolute top-3 right-3">
-        <Badge className={cn("shadow-sm bg-white/90 backdrop-blur-sm text-slate-800 border-none hover:bg-white", 
-          event.status === 'Live' && "text-red-600 bg-white/90"
-        )}>
-          {event.status === 'Live' && <span className="w-2 h-2 rounded-full bg-red-500 mr-1.5 animate-pulse" />}
-          {event.status}
-        </Badge>
-      </div>
-    </div>
-    <CardContent className="p-5">
-      <h3 className="font-bold text-lg text-slate-900 mb-2 leading-tight group-hover:text-blue-600 transition-colors">{event.name}</h3>
-      <div className="space-y-1.5 mb-4">
-        <div className="flex items-center text-xs text-slate-500 gap-2">
-          <CalendarIcon className="h-3.5 w-3.5" />
-          {formatDateRange(event.startDate, event.endDate)}
-        </div>
-        <div className="flex items-center text-xs text-slate-500 gap-2">
-          <MapPin className="h-3.5 w-3.5" />
-          {event.location}
-        </div>
-      </div>
-      <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-        <div className="text-xs font-medium text-slate-600">
-          <span className="text-slate-900 font-bold">{event.registrants}</span> registered
-        </div>
-        <div className="text-xs font-medium text-slate-600">
-          <span className="text-emerald-600 font-bold">{formatCurrency(event.revenue)}</span>
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-);
-
-const SpeakerCard = ({ speaker, onEdit }: { speaker: Speaker; onEdit: (s: Speaker) => void }) => (
-  <Card className="group overflow-hidden hover:shadow-md transition-all">
-    <CardContent className="p-5 flex items-start gap-4">
-      <Avatar className="h-16 w-16 border-2 border-slate-100 shrink-0">
-        <AvatarImage src={speaker.avatar} />
-        <AvatarFallback className="bg-slate-100 text-slate-500 font-bold text-lg">{speaker.firstName[0]}{speaker.lastName[0]}</AvatarFallback>
-      </Avatar>
-      <div className="flex-1 min-w-0">
-        <div className="flex justify-between items-start">
-          <div>
-            <h4 className="font-bold text-slate-900 truncate">{speaker.firstName} {speaker.lastName}</h4>
-            <p className="text-xs text-slate-500 truncate">{speaker.jobTitle}</p>
-            <p className="text-xs text-slate-500 truncate">{speaker.company}</p>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-slate-400 hover:text-slate-700">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(speaker)}>Edit Details</DropdownMenuItem>
-              <DropdownMenuItem>Send Invite</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-600">Remove</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-        <div className="mt-3 flex items-center justify-between">
-          <Badge variant="secondary" className={cn("text-[10px] h-5 px-1.5 font-medium border border-transparent", getStatusColor(speaker.status))}>
-            {speaker.status}
-          </Badge>
-          <div className="flex gap-2">
-            {speaker.linkedin && <Linkedin className="h-3.5 w-3.5 text-slate-400 hover:text-[#0077b5] cursor-pointer transition-colors" />}
-            {speaker.twitter && <Twitter className="h-3.5 w-3.5 text-slate-400 hover:text-sky-500 cursor-pointer transition-colors" />}
-          </div>
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-);
-
-const CreateEventDialog = ({ open, onOpenChange, onCreate }: { open: boolean, onOpenChange: (open: boolean) => void, onCreate: (evt: ConferenceEvent) => void }) => {
-  const [name, setName] = useState('');
-  const [date, setDate] = useState('');
-  const [location, setLocation] = useState('');
-
-  const handleSubmit = () => {
-    if (!name) return;
-    const newEvent: ConferenceEvent = {
-      id: `evt-${Date.now()}`,
-      name,
-      slug: name.toLowerCase().replace(/ /g, '-'),
-      startDate: date,
-      endDate: date,
-      location: location || 'TBD',
-      status: 'Draft',
-      registrants: 0,
-      capacity: 100,
-      revenue: 0,
-      image: '',
-      fundCode: 'NEW-EVT',
-      tracks: [],
-      rooms: [],
-      sessionTypes: [{ id: 'typ-1', name: 'General' }],
-      sessions: []
-    };
-    onCreate(newEvent);
-    onOpenChange(false);
-    setName('');
-    setDate('');
-    setLocation('');
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Create New Event</DialogTitle>
-          <DialogDescription>
-            Add basic details to get started. You can configure tracks and rooms later.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Event Name</Label>
-            <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Annual Summit 2025" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="date">Start Date</Label>
-            <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
-            <Input id="location" value={location} onChange={e => setLocation(e.target.value)} placeholder="Venue City, State" />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={!name} className="bg-slate-900 text-white">Create Event</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+    );
 };
 
 // --- CONFIGURATION COMPONENT (Tracks, Rooms, Types) ---
@@ -1155,9 +1048,7 @@ const AttendeeManager = ({ attendees, event }: { attendees: Attendee[], event: C
                                         <div className="relative">
                                             <Avatar className="h-20 w-20 border-4 border-slate-50 shadow-sm">
                                                 <AvatarImage src={selectedAttendee.avatar} />
-                                                <AvatarFallback className="text-xl bg-slate-100 text-slate-600 font-bold">
-                                                    {getInitials(selectedAttendee.name)}
-                                                </AvatarFallback>
+                                                <AvatarFallback className="text-xl bg-slate-100 text-slate-600 font-bold">{getInitials(selectedAttendee.name)}</AvatarFallback>
                                             </Avatar>
                                             {selectedAttendee.status === 'Checked In' && (
                                                 <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white p-1 rounded-full border-4 border-white" title="Checked In">
@@ -1371,6 +1262,524 @@ const AttendeeManager = ({ attendees, event }: { attendees: Attendee[], event: C
     );
 };
 
+const RegistrationFormBuilder = () => {
+  const [fields, setFields] = useState<FormField[]>(DEFAULT_FORM_FIELDS);
+  return (
+    <div className="flex h-[calc(100vh-14rem)] gap-6">
+      {/* Canvas */}
+      <div className="flex-1 bg-slate-100 rounded-xl border border-slate-200 overflow-y-auto p-8 flex justify-center">
+        <div className="w-full max-w-2xl bg-white shadow-sm rounded-lg border border-slate-200 min-h-[600px] flex flex-col">
+          <div className="p-8 border-b border-slate-100 bg-slate-50/50 rounded-t-lg">
+            <div className="h-8 w-32 bg-slate-200 rounded mb-4" />
+            <div className="h-4 w-64 bg-slate-200 rounded" />
+          </div>
+          <div className="p-8 space-y-6">
+            {fields.map((field) => (
+              <div key={field.id} className="group relative p-4 border border-transparent hover:border-blue-200 hover:bg-blue-50/30 rounded-lg transition-all cursor-pointer -mx-4">
+                <Label className="mb-2 block text-sm font-semibold text-slate-700">
+                  {field.label} {field.required && <span className="text-red-500">*</span>}
+                </Label>
+                
+                {field.type === 'text' || field.type === 'email' || field.type === 'date' ? (
+                  <Input disabled placeholder={field.placeholder || ''} className="bg-slate-50 pointer-events-none" />
+                ) : field.type === 'textarea' ? (
+                  <Textarea disabled className="bg-slate-50 min-h-[80px] pointer-events-none" />
+                ) : field.type === 'select' ? (
+                  <Select disabled className="pointer-events-none">
+                    <option>Select an option...</option>
+                  </Select>
+                ) : (
+                  <div className="h-10 bg-slate-50 rounded border border-slate-200 flex items-center px-3 text-sm text-slate-400 italic">
+                    {field.type} input preview
+                  </div>
+                )}
+                
+                {field.helpText && <p className="text-xs text-slate-500 mt-1.5">{field.helpText}</p>}
+
+                <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                  <Button variant="ghost" size="icon" className="h-7 w-7"><Settings className="h-3.5 w-3.5" /></Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600"><Trash2 className="h-3.5 w-3.5" /></Button>
+                </div>
+              </div>
+            ))}
+            <Button variant="outline" className="w-full border-dashed border-slate-300 text-slate-500 hover:border-slate-400 hover:text-slate-700 h-12">
+              <Plus className="h-4 w-4 mr-2" /> Add Field
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Sidebar */}
+      <div className="w-80 bg-white rounded-xl border border-slate-200 flex flex-col overflow-hidden shrink-0">
+        <div className="p-4 border-b border-slate-100 font-semibold text-sm">Form Elements</div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+          <div className="space-y-3">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Basic Fields</p>
+            <div className="grid grid-cols-2 gap-2">
+              {['Text', 'Email', 'Number', 'Date', 'Select', 'Checkbox'].map(type => (
+                <div key={type} className="flex items-center gap-2 p-2 rounded border border-slate-200 bg-slate-50 hover:border-blue-300 hover:bg-blue-50 cursor-grab active:cursor-grabbing transition-colors">
+                  <div className="w-4 h-4 bg-white border border-slate-200 rounded flex items-center justify-center text-[8px] font-bold text-slate-400">Aa</div>
+                  <span className="text-xs font-medium text-slate-700">{type}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CheckInKiosk = ({ onClose }: { onClose: () => void }) => {
+  const [search, setSearch] = useState('');
+  const [attendee, setAttendee] = useState<Attendee | null>(null);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Mock search
+    const found = MOCK_ATTENDEES.find(a => a.email.toLowerCase() === search.toLowerCase() || a.name.toLowerCase().includes(search.toLowerCase()));
+    setAttendee(found || null);
+  };
+
+  const handleCheckIn = () => {
+    if (attendee) {
+      // In real app, update state/DB
+      alert(`${attendee.name} Checked In!`);
+      setAttendee(null);
+      setSearch('');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center p-4">
+      <Button 
+        variant="ghost" 
+        onClick={onClose} 
+        className="absolute top-4 right-4 text-white/50 hover:text-white hover:bg-white/10"
+      >
+        <X className="h-6 w-6" />
+      </Button>
+
+      <div className="w-full max-w-md space-y-8">
+        <div className="text-center space-y-2 text-white">
+          <div className="w-16 h-16 bg-white rounded-2xl mx-auto flex items-center justify-center mb-6">
+            <ScanLine className="h-8 w-8 text-slate-900" />
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight">Event Check-In</h1>
+          <p className="text-slate-400">Scan QR code or search by name/email.</p>
+        </div>
+
+        {!attendee ? (
+          <form onSubmit={handleSearch} className="relative">
+            <Search className="absolute left-4 top-4 h-6 w-6 text-slate-400" />
+            <input 
+              autoFocus
+              className="w-full h-14 pl-12 pr-4 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white/20 transition-all text-lg"
+              placeholder="Search attendee..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </form>
+        ) : (
+          <div className="bg-white rounded-2xl p-6 animate-in zoom-in-95 duration-300">
+            <div className="text-center mb-6">
+              <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-full mx-auto flex items-center justify-center text-2xl font-bold mb-3 border-4 border-blue-100">
+                {getInitials(attendee.name)}
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900">{attendee.name}</h2>
+              <p className="text-slate-500">{attendee.email}</p>
+              <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
+                {attendee.ticketType}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {attendee.status === 'Checked In' ? (
+                <div className="bg-emerald-50 text-emerald-800 p-4 rounded-xl flex items-center justify-center gap-2 font-bold border border-emerald-100">
+                  <CheckCircle2 className="h-5 w-5" /> Already Checked In
+                </div>
+              ) : (
+                <Button onClick={handleCheckIn} className="w-full h-14 text-lg font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20">
+                  Check In
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => { setAttendee(null); setSearch(''); }} className="w-full h-12">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const ScheduleManager = ({ event, speakers, onUpdateSession }: { event: ConferenceEvent, speakers: Speaker[], onUpdateSession: (s: Session) => void }) => {
+  const [sessions, setSessions] = useState<Session[]>(event.sessions || []);
+  const [selectedDate, setSelectedDate] = useState(event.startDate);
+  const [editSession, setEditSession] = useState<Session | null>(null);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+
+  // Helper to get dates between start and end
+  const getEventDates = () => {
+    const dates = [];
+    const curr = new Date(event.startDate);
+    const end = new Date(event.endDate);
+    while (curr <= end) {
+      dates.push(curr.toISOString().split('T')[0]);
+      curr.setDate(curr.getDate() + 1);
+    }
+    return dates;
+  };
+
+  const dates = getEventDates();
+
+  const handleSaveSession = (session: Session) => {
+    let updatedSessions;
+    if (session.id && sessions.find(s => s.id === session.id)) {
+      updatedSessions = sessions.map(s => s.id === session.id ? session : s);
+    } else {
+      const newSession = { ...session, id: `sess-${Date.now()}` };
+      updatedSessions = [...sessions, newSession];
+    }
+    setSessions(updatedSessions);
+    // In a real app, propagate this up to the event object
+    // onUpdateSession(session); 
+    setIsEditorOpen(false);
+  };
+
+  const handleDeleteSession = (id: string) => {
+    setSessions(prev => prev.filter(s => s.id !== id));
+    setIsEditorOpen(false);
+  };
+
+  const filteredSessions = sessions
+    .filter(s => s.date === selectedDate)
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-14rem)] bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+      
+      {/* Schedule Toolbar */}
+      <div className="flex flex-col md:flex-row justify-between items-center p-4 border-b border-slate-100 gap-4 bg-slate-50/50">
+        <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-1 md:pb-0 scrollbar-hide">
+          {dates.map(date => {
+            const d = new Date(date);
+            return (
+              <button
+                key={date}
+                onClick={() => setSelectedDate(date)}
+                className={cn(
+                  "flex flex-col items-center px-4 py-2 rounded-lg border transition-all min-w-[80px]",
+                  selectedDate === date 
+                    ? "bg-slate-900 text-white border-slate-900 shadow-md" 
+                    : "bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                )}
+              >
+                <span className="text-[10px] font-bold uppercase tracking-wider opacity-70">{d.toLocaleDateString('en-US', { weekday: 'short' })}</span>
+                <span className="text-lg font-bold leading-none">{d.getDate()}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="flex items-center gap-2 w-full md:w-auto">
+           <Button variant="outline" className="bg-white" onClick={() => {/* Filter logic */}}>
+             <Filter className="h-4 w-4 mr-2" /> Filter
+           </Button>
+           <Button className="bg-slate-900 text-white" onClick={() => { setEditSession(null); setIsEditorOpen(true); }}>
+             <Plus className="h-4 w-4 mr-2" /> Add Session
+           </Button>
+        </div>
+      </div>
+
+      {/* Timeline View */}
+      <div className="flex-1 overflow-y-auto p-4 bg-slate-50/30">
+         <div className="space-y-4 max-w-5xl mx-auto">
+            {filteredSessions.length === 0 && (
+               <div className="text-center py-20 text-slate-400">
+                  <CalendarDays className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                  <p>No sessions scheduled for this day.</p>
+                  <Button variant="link" onClick={() => { setEditSession(null); setIsEditorOpen(true); }}>Schedule First Session</Button>
+               </div>
+            )}
+
+            {filteredSessions.map(session => {
+               const track = event.tracks.find(t => t.id === session.trackId);
+               const room = event.rooms.find(r => r.id === session.locationId);
+               const type = event.sessionTypes.find(t => t.id === session.typeId);
+               const sessionSpeakers = speakers.filter(s => session.speakerIds.includes(s.id));
+               
+               // Check conflicts (simplistic check for demo)
+               const hasConflict = sessions.some(s => 
+                 s.id !== session.id && 
+                 s.date === session.date &&
+                 s.locationId === session.locationId && 
+                 ((s.startTime >= session.startTime && s.startTime < session.endTime) || 
+                  (s.endTime > session.startTime && s.endTime <= session.endTime))
+               );
+
+               return (
+                  <div 
+                    key={session.id} 
+                    onClick={() => { setEditSession(session); setIsEditorOpen(true); }}
+                    className="flex group relative pl-20 py-2 cursor-pointer"
+                  >
+                     {/* Time Column */}
+                     <div className="absolute left-0 top-2 w-16 text-right">
+                        <span className="text-sm font-bold text-slate-900 block">{formatTime(session.startTime)}</span>
+                        <span className="text-xs text-slate-400 font-medium">{getDuration(session.startTime, session.endTime)}</span>
+                     </div>
+
+                     {/* Connector */}
+                     <div className="absolute left-[70px] top-0 bottom-0 w-px bg-slate-200 group-hover:bg-slate-300 transition-colors">
+                        <div className="absolute top-4 -left-1.5 w-3 h-3 rounded-full bg-slate-300 ring-4 ring-white group-hover:bg-blue-500 transition-colors" />
+                     </div>
+
+                     {/* Card */}
+                     <div className={cn(
+                       "flex-1 ml-4 bg-white rounded-xl border p-4 shadow-sm transition-all hover:shadow-md hover:border-blue-300 relative overflow-hidden",
+                       hasConflict ? "border-red-300 bg-red-50/30" : "border-slate-200"
+                     )}>
+                        {track && <div className={cn("absolute left-0 top-0 bottom-0 w-1", track.color.split(' ')[0].replace('bg-', 'bg-'))} />}
+                        
+                        <div className="flex justify-between items-start mb-2 pl-2">
+                           <div className="flex gap-2 items-center">
+                              {track && <Badge variant="secondary" className={cn("text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 border-transparent", track.color)}>{track.name}</Badge>}
+                              {type && <Badge variant="outline" className="text-[10px] text-slate-500 border-slate-200">{type.name}</Badge>}
+                              {hasConflict && <Badge variant="destructive" className="text-[10px] h-5 gap-1"><AlertTriangle className="h-3 w-3" /> Room Conflict</Badge>}
+                           </div>
+                           <div className="text-xs text-slate-400 flex items-center gap-1">
+                              <MapPin className="h-3 w-3" /> 
+                              <span title={room?.locationDescription}>{room?.name || 'TBD'}</span>
+                           </div>
+                        </div>
+                        
+                        <h3 className="text-lg font-bold text-slate-900 mb-1 pl-2">{session.title}</h3>
+                        
+                        <div className="flex items-center gap-4 mt-4 pl-2">
+                           {sessionSpeakers.length > 0 ? (
+                              <div className="flex -space-x-2">
+                                 {sessionSpeakers.map(s => (
+                                    <Avatar key={s.id} className="h-8 w-8 border-2 border-white ring-1 ring-slate-100" title={`${s.firstName} ${s.lastName}`}>
+                                       <AvatarImage src={s.avatar} />
+                                       <AvatarFallback className="bg-slate-100 text-[10px]">{s.firstName[0]}{s.lastName[0]}</AvatarFallback>
+                                    </Avatar>
+                                 ))}
+                              </div>
+                           ) : (
+                              <div className="flex items-center gap-2 text-xs text-slate-400 italic">
+                                 <User className="h-3 w-3" /> No speakers assigned
+                              </div>
+                           )}
+                           
+                           {session.description && (
+                              <p className="text-sm text-slate-500 line-clamp-1 flex-1">{session.description}</p>
+                           )}
+                        </div>
+                     </div>
+                  </div>
+               )
+            })}
+         </div>
+      </div>
+
+      {/* --- SESSION EDITOR SHEET --- */}
+      <Sheet open={isEditorOpen} onOpenChange={setIsEditorOpen}>
+        <SheetContent className="w-full sm:max-w-xl p-0 gap-0 flex flex-col h-full bg-slate-50">
+          <SheetHeader className="px-6 py-4 bg-white border-b border-slate-100 shrink-0">
+             <SheetTitle className="flex items-center gap-2 text-lg">
+                {editSession ? <><FileText className="h-4 w-4 text-blue-600" /> Edit Session</> : <><Plus className="h-4 w-4 text-blue-600" /> New Session</>}
+             </SheetTitle>
+             <SheetDescription>Configure details using the event's defined tracks and rooms.</SheetDescription>
+          </SheetHeader>
+          
+          {/* Scrollable Form */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+             <SessionForm 
+                initialData={editSession} 
+                defaultDate={selectedDate}
+                event={event} // Pass the full event config
+                speakers={speakers}
+                onSave={handleSaveSession}
+                onDelete={handleDeleteSession}
+             />
+          </div>
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+};
+
+const SessionForm = ({ initialData, defaultDate, event, speakers, onSave, onDelete }: any) => {
+   const [formData, setFormData] = useState<Partial<Session>>(initialData || {
+      title: '',
+      description: '',
+      date: defaultDate,
+      startTime: '09:00',
+      endTime: '10:00',
+      locationId: '',
+      speakerIds: [],
+      trackId: '',
+      typeId: '',
+      isPublished: true
+   });
+
+   const toggleSpeaker = (id: string) => {
+      const current = formData.speakerIds || [];
+      if (current.includes(id)) {
+         setFormData({ ...formData, speakerIds: current.filter(sid => sid !== id) });
+      } else {
+         setFormData({ ...formData, speakerIds: [...current, id] });
+      }
+   };
+
+   return (
+      <div className="space-y-6">
+         <div className="space-y-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            <div className="space-y-2">
+               <Label>Session Title</Label>
+               <Input 
+                  value={formData.title} 
+                  onChange={e => setFormData({ ...formData, title: e.target.value })} 
+                  placeholder="e.g. The Future of Fundraising"
+                  className="font-semibold"
+               />
+            </div>
+            <div className="space-y-2">
+               <Label>Abstract / Description</Label>
+               <Textarea 
+                  value={formData.description} 
+                  onChange={e => setFormData({ ...formData, description: e.target.value })} 
+                  className="min-h-[80px]"
+                  placeholder="What will attendees learn?"
+               />
+            </div>
+         </div>
+
+         <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+               <Label>Date</Label>
+               <Input 
+                  type="date" 
+                  value={formData.date} 
+                  onChange={e => setFormData({ ...formData, date: e.target.value })} 
+               />
+            </div>
+            <div className="space-y-2">
+               <Label>Type</Label>
+               <Select 
+                  value={formData.typeId} 
+                  onChange={e => setFormData({ ...formData, typeId: e.target.value })}
+               >
+                  <option value="">Select Type...</option>
+                  {event.sessionTypes.map((t: SessionType) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+               </Select>
+            </div>
+         </div>
+
+         <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+               <Label>Start Time</Label>
+               <Input 
+                  type="time" 
+                  value={formData.startTime} 
+                  onChange={e => setFormData({ ...formData, startTime: e.target.value })} 
+               />
+            </div>
+            <div className="space-y-2">
+               <Label>End Time</Label>
+               <Input 
+                  type="time" 
+                  value={formData.endTime} 
+                  onChange={e => setFormData({ ...formData, endTime: e.target.value })} 
+               />
+            </div>
+         </div>
+
+         <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+               <Label>Track</Label>
+               <Select 
+                  value={formData.trackId} 
+                  onChange={e => setFormData({ ...formData, trackId: e.target.value })}
+               >
+                  <option value="">Select Track...</option>
+                  {event.tracks.map((t: Track) => <option key={t.id} value={t.id}>{t.name}</option>)}
+               </Select>
+            </div>
+            <div className="space-y-2">
+               <Label>Location</Label>
+               <Select 
+                  value={formData.locationId} 
+                  onChange={e => setFormData({ ...formData, locationId: e.target.value })}
+               >
+                  <option value="">Select Room...</option>
+                  {event.rooms.map((r: Room) => (
+                      <option key={r.id} value={r.id}>{r.name} ({r.capacity} cap)</option>
+                  ))}
+               </Select>
+            </div>
+         </div>
+         
+         {/* Show location description if selected */}
+         {formData.locationId && (
+             <div className="bg-slate-50 p-2 rounded text-xs text-slate-500 flex items-center gap-2">
+                 <Compass className="h-3 w-3" />
+                 {event.rooms.find((r: Room) => r.id === formData.locationId)?.locationDescription || 'No location details'}
+             </div>
+         )}
+
+         <div className="space-y-3">
+            <Label>Speakers</Label>
+            <div className="border border-slate-200 rounded-lg max-h-48 overflow-y-auto bg-white divide-y divide-slate-100">
+               {speakers.map((s: Speaker) => (
+                  <div 
+                     key={s.id} 
+                     onClick={() => toggleSpeaker(s.id)}
+                     className="flex items-center gap-3 p-2 hover:bg-slate-50 cursor-pointer"
+                  >
+                     <div className={cn(
+                        "w-4 h-4 border rounded flex items-center justify-center transition-colors",
+                        formData.speakerIds?.includes(s.id) ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300 bg-white"
+                     )}>
+                        {formData.speakerIds?.includes(s.id) && <Check className="w-3 h-3" />}
+                     </div>
+                     <Avatar className="h-6 w-6">
+                        <AvatarImage src={s.avatar} />
+                        <AvatarFallback>{s.firstName[0]}</AvatarFallback>
+                     </Avatar>
+                     <span className="text-sm font-medium">{s.firstName} {s.lastName}</span>
+                  </div>
+               ))}
+            </div>
+         </div>
+
+         <div className="flex items-center justify-between p-3 border rounded-lg bg-white">
+            <Label className="cursor-pointer" htmlFor="publish-switch">Publish to App</Label>
+            <Switch 
+               id="publish-switch"
+               checked={formData.isPublished}
+               onCheckedChange={c => setFormData({ ...formData, isPublished: c })}
+            />
+         </div>
+
+         <div className="pt-6 flex justify-between border-t border-slate-200">
+            {initialData?.id ? (
+               <Button variant="ghost" onClick={() => onDelete(initialData.id)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                  <Trash2 className="h-4 w-4 mr-2" /> Delete
+               </Button>
+            ) : <div />}
+            <Button onClick={() => onSave(formData)} className="bg-slate-900 text-white shadow-md">
+               <Save className="h-4 w-4 mr-2" /> Save Session
+            </Button>
+         </div>
+      </div>
+   );
+};
+
 const SpeakerDialog = ({ 
   open, 
   onOpenChange, 
@@ -1379,265 +1788,458 @@ const SpeakerDialog = ({
 }: { 
   open: boolean; 
   onOpenChange: (open: boolean) => void; 
-  speaker?: Speaker; 
+  speaker?: Speaker;
   onSave: (s: Speaker) => void; 
 }) => {
-  const [formData, setFormData] = useState<Partial<Speaker>>({});
+  const [activeTab, setActiveTab] = useState('profile');
+  const [formData, setFormData] = useState<Partial<Speaker>>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    jobTitle: '',
+    company: '',
+    bio: '',
+    status: 'Invited',
+    linkedin: '',
+    twitter: '',
+    website: '',
+    ...speaker
+  });
 
   React.useEffect(() => {
-    if (open) {
-      setFormData(speaker || {
-        firstName: '',
-        lastName: '',
-        email: '',
-        jobTitle: '',
-        company: '',
-        bio: '',
-        status: 'Invited',
-        avatar: ''
+    if (speaker) {
+      setFormData(speaker);
+    } else {
+      setFormData({ 
+        firstName: '', lastName: '', email: '', jobTitle: '', 
+        company: '', bio: '', status: 'Invited' 
       });
     }
-  }, [open, speaker]);
+  }, [speaker, open]);
 
   const handleSubmit = () => {
-    onSave({
+    if (!formData.firstName || !formData.lastName) return;
+    
+    const newSpeaker: Speaker = {
       id: speaker?.id || `spk-${Date.now()}`,
-      eventId: speaker?.eventId || 'evt-1', // Default or passed context if available, for now hardcode or use existing
-      avatar: formData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${formData.firstName}`,
+      eventId: speaker?.eventId || 'evt-1', // Default or passed prop
       firstName: formData.firstName || '',
       lastName: formData.lastName || '',
       email: formData.email || '',
       jobTitle: formData.jobTitle || '',
       company: formData.company || '',
       bio: formData.bio || '',
-      status: (formData.status as SpeakerStatus) || 'Invited',
+      avatar: formData.avatar || '',
+      status: formData.status as SpeakerStatus,
+      linkedin: formData.linkedin,
+      twitter: formData.twitter,
+      website: formData.website,
       sessions: formData.sessions || []
-    });
+    };
+    onSave(newSpeaker);
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>{speaker ? 'Edit Speaker' : 'Add Speaker'}</DialogTitle>
-          <DialogDescription>Speaker details and bio.</DialogDescription>
+      <DialogContent className="sm:max-w-[700px] p-0 gap-0 overflow-hidden flex flex-col h-[85vh]">
+        <DialogHeader className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
+          <DialogTitle className="text-xl">{speaker ? 'Edit Speaker' : 'Add New Speaker'}</DialogTitle>
+          <DialogDescription>Manage speaker profile, bio, and visibility.</DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>First Name</Label>
-              <Input value={formData.firstName || ''} onChange={e => setFormData({...formData, firstName: e.target.value})} />
-            </div>
-            <div className="space-y-2">
-              <Label>Last Name</Label>
-              <Input value={formData.lastName || ''} onChange={e => setFormData({...formData, lastName: e.target.value})} />
-            </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+          <div className="px-6 pt-4 shrink-0">
+            <TabsList className="grid w-full grid-cols-3 bg-slate-100 h-10 p-1">
+              <TabsTrigger value="profile">Profile & Bio</TabsTrigger>
+              <TabsTrigger value="social">Social & Media</TabsTrigger>
+              <TabsTrigger value="sessions">Sessions</TabsTrigger>
+            </TabsList>
           </div>
-          <div className="space-y-2">
-            <Label>Email</Label>
-            <Input value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})} />
+
+          <div className="flex-1 overflow-y-auto p-6">
+            <TabsContent value="profile" className="space-y-6 mt-0">
+              <div className="flex items-start gap-6">
+                <div className="shrink-0 space-y-3">
+                   <div className="h-24 w-24 bg-slate-100 rounded-full border-2 border-dashed border-slate-200 flex items-center justify-center relative overflow-hidden group cursor-pointer hover:border-blue-400 transition-colors">
+                      {formData.avatar ? (
+                        <img src={formData.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="text-center">
+                           <ImageIcon className="h-6 w-6 text-slate-300 mx-auto" />
+                           <span className="text-[10px] text-slate-400 block mt-1">Upload</span>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                         <Upload className="h-6 w-6 text-white" />
+                      </div>
+                   </div>
+                </div>
+                <div className="flex-1 grid grid-cols-2 gap-4">
+                   <div className="space-y-2">
+                      <Label>First Name</Label>
+                      <Input value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} />
+                   </div>
+                   <div className="space-y-2">
+                      <Label>Last Name</Label>
+                      <Input value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} />
+                   </div>
+                   <div className="col-span-2 space-y-2">
+                      <Label>Email (Private)</Label>
+                      <Input value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="speaker@example.com" />
+                   </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-2">
+                    <Label>Job Title</Label>
+                    <Input value={formData.jobTitle} onChange={e => setFormData({...formData, jobTitle: e.target.value})} placeholder="e.g. Chief Product Officer" />
+                 </div>
+                 <div className="space-y-2">
+                    <Label>Company / Organization</Label>
+                    <Input value={formData.company} onChange={e => setFormData({...formData, company: e.target.value})} placeholder="e.g. Acme Corp" />
+                 </div>
+              </div>
+
+              <div className="space-y-2">
+                 <Label>Biography</Label>
+                 <RichTextEditor 
+                    value={formData.bio || ''} 
+                    onChange={(val) => setFormData({...formData, bio: val})} 
+                    placeholder="Enter speaker bio..."
+                    className="min-h-[150px]"
+                 />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="social" className="space-y-6 mt-0">
+               <div className="space-y-4">
+                  <h3 className="font-semibold text-sm text-slate-900">Social Links</h3>
+                  <div className="space-y-3">
+                     <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center text-[#0077b5]">
+                           <Linkedin className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 space-y-1">
+                           <Label className="text-xs">LinkedIn URL</Label>
+                           <Input value={formData.linkedin} onChange={e => setFormData({...formData, linkedin: e.target.value})} placeholder="linkedin.com/in/username" />
+                        </div>
+                     </div>
+                     <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center text-slate-900">
+                           <Twitter className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 space-y-1">
+                           <Label className="text-xs">Twitter / X Handle</Label>
+                           <Input value={formData.twitter} onChange={e => setFormData({...formData, twitter: e.target.value})} placeholder="@username" />
+                        </div>
+                     </div>
+                     <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center text-slate-500">
+                           <Globe className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 space-y-1">
+                           <Label className="text-xs">Website</Label>
+                           <Input value={formData.website} onChange={e => setFormData({...formData, website: e.target.value})} placeholder="https://..." />
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </TabsContent>
+
+            <TabsContent value="sessions" className="space-y-6 mt-0">
+               <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 flex gap-3 items-start">
+                  <div className="p-2 bg-white rounded-full text-blue-600 shadow-sm"><Mic2 className="h-4 w-4" /></div>
+                  <div>
+                     <h4 className="font-bold text-sm text-blue-900">Session Assignment</h4>
+                     <p className="text-xs text-blue-700 mt-1">To assign this speaker to sessions, go to the Schedule tab and edit the specific session.</p>
+                  </div>
+               </div>
+               
+               <div className="space-y-3">
+                  <Label>Assigned Sessions</Label>
+                  {formData.sessions && formData.sessions.length > 0 ? (
+                     <div className="space-y-2">
+                        {formData.sessions.map(sid => {
+                           const session = MOCK_SESSIONS.find(s => s.id === sid);
+                           if (!session) return null;
+                           return (
+                              <div key={sid} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg shadow-sm">
+                                 <div>
+                                    <p className="font-bold text-sm text-slate-900">{session.title}</p>
+                                    <p className="text-xs text-slate-500">{session.startTime} • {MOCK_ROOMS.find(r=>r.id === session.locationId)?.name}</p>
+                                 </div>
+                                 <Button variant="ghost" size="sm" className="h-8">View</Button>
+                              </div>
+                           )
+                        })}
+                     </div>
+                  ) : (
+                     <p className="text-sm text-slate-500 italic">No sessions assigned.</p>
+                  )}
+               </div>
+            </TabsContent>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Job Title</Label>
-              <Input value={formData.jobTitle || ''} onChange={e => setFormData({...formData, jobTitle: e.target.value})} />
-            </div>
-            <div className="space-y-2">
-              <Label>Company</Label>
-              <Input value={formData.company || ''} onChange={e => setFormData({...formData, company: e.target.value})} />
-            </div>
+        </Tabs>
+
+        <DialogFooter className="px-6 py-4 border-t border-slate-100 bg-slate-50 shrink-0 flex justify-between items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+             <Label className="text-xs font-medium text-slate-500 mr-2">Status:</Label>
+             <Select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as any})} className="h-8 w-32 text-xs">
+                <option value="Invited">Invited</option>
+                <option value="Confirmed">Confirmed</option>
+                <option value="Pending">Pending</option>
+                <option value="Declined">Declined</option>
+             </Select>
           </div>
-          <div className="space-y-2">
-            <Label>Bio</Label>
-            <Textarea value={formData.bio || ''} onChange={e => setFormData({...formData, bio: e.target.value})} />
+          <div className="flex gap-2">
+             <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+             <Button onClick={handleSubmit} className="bg-slate-900 text-white min-w-[100px]">Save Speaker</Button>
           </div>
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} className="bg-slate-900 text-white">Save Speaker</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 };
 
-const ScheduleManager = ({ event, speakers, onUpdateSession }: { event: ConferenceEvent; speakers: Speaker[]; onUpdateSession: (s: Session) => void }) => {
+const EventSettings: React.FC<{ event: ConferenceEvent }> = ({ event }) => {
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-bold text-slate-900">Session Schedule</h3>
-        <Button size="sm" variant="outline"><Plus className="h-4 w-4 mr-2" /> Add Session</Button>
-      </div>
-      <div className="space-y-4">
-        {event.sessions.map(session => {
-          const room = event.rooms.find(r => r.id === session.locationId);
-          const track = event.tracks.find(t => t.id === session.trackId);
-          return (
-            <Card key={session.id} className="border-slate-200 shadow-sm">
-              <CardContent className="p-4 flex gap-4">
-                <div className="w-32 flex flex-col justify-center text-center border-r border-slate-100 pr-4">
-                  <div className="text-sm font-bold text-slate-900">{formatTime(session.startTime)}</div>
-                  <div className="text-xs text-slate-500">{formatTime(session.endTime)}</div>
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-bold text-slate-900">{session.title}</h4>
-                    {track && <Badge variant="secondary" className={cn("text-[10px] h-5", track.color)}>{track.name}</Badge>}
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-slate-500">
-                    <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {room?.name || 'TBD'}</span>
-                    <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {session.speakerIds.length} Speakers</span>
-                  </div>
-                </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8 self-center"><MoreHorizontal className="h-4 w-4" /></Button>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
-const RegistrationFormBuilder = () => {
-  const [fields, setFields] = useState<FormField[]>(DEFAULT_FORM_FIELDS);
-
-  return (
-    <div className="flex h-[600px] border rounded-xl overflow-hidden bg-white shadow-sm">
-      <div className="w-64 bg-slate-50 border-r border-slate-200 p-4 space-y-4">
-        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Form Elements</h3>
-        <div className="grid grid-cols-2 gap-2">
-          {['Text', 'Email', 'Number', 'Select', 'Checkbox', 'Radio', 'Date', 'File'].map(type => (
-            <Button key={type} variant="outline" size="sm" className="justify-start text-xs bg-white h-8">
-              {type}
-            </Button>
-          ))}
-        </div>
-      </div>
-      <div className="flex-1 p-8 bg-slate-100/50 overflow-y-auto">
-        <div className="max-w-xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-slate-200 space-y-6">
-          <div className="text-center border-b border-slate-100 pb-6">
-            <h2 className="text-2xl font-bold text-slate-900">Register for Event</h2>
-            <p className="text-slate-500 mt-2">Please fill out your details below.</p>
-          </div>
-          {fields.map(field => (
-            <div key={field.id} className="space-y-2 group relative hover:ring-1 hover:ring-blue-100 p-2 rounded-lg -mx-2 transition-all">
-              <Label className="flex gap-1">
-                {field.label} {field.required && <span className="text-red-500">*</span>}
-              </Label>
-              {field.type === 'textarea' ? (
-                <Textarea placeholder={field.placeholder} />
-              ) : field.type === 'select' ? (
-                <Select><option>Select...</option></Select>
-              ) : (
-                <Input type={field.type} placeholder={field.placeholder} />
-              )}
-              {field.helpText && <p className="text-xs text-slate-500">{field.helpText}</p>}
-              <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100">
-                <Button variant="ghost" size="icon" className="h-6 w-6"><Settings className="h-3 w-3" /></Button>
-              </div>
-            </div>
-          ))}
-          <Button className="w-full bg-slate-900 text-white">Register Now</Button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const EventSettings = ({ event }: { event: ConferenceEvent }) => {
-  return (
-    <div className="max-w-2xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <Card>
         <CardHeader>
-          <CardTitle>General Settings</CardTitle>
-          <CardDescription>Basic event information and visibility.</CardDescription>
+          <CardTitle>Event Settings</CardTitle>
+          <CardDescription>Manage core details for {event.name}.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Event Name</Label>
-            <Input defaultValue={event.name} />
-          </div>
-          <div className="space-y-2">
-            <Label>Event Slug</Label>
-            <div className="flex">
-              <span className="bg-slate-100 border border-r-0 border-slate-300 rounded-l-md px-3 flex items-center text-slate-500 text-sm">events/</span>
-              <Input className="rounded-l-none" defaultValue={event.slug} />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Event Name</Label>
+              <Input defaultValue={event.name} />
+            </div>
+            <div className="space-y-2">
+              <Label>Slug</Label>
+              <Input defaultValue={event.slug} />
             </div>
           </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Public Visibility</Label>
-              <p className="text-xs text-slate-500">Make this event visible on the public portal.</p>
-            </div>
-            <Switch checked={event.status === 'Published'} />
+          <div className="space-y-2">
+             <Label>Fund Code</Label>
+             <Input defaultValue={event.fundCode} />
           </div>
         </CardContent>
+        <CardFooter className="border-t bg-slate-50 px-6 py-4">
+           <Button className="bg-slate-900 text-white">Save Changes</Button>
+        </CardFooter>
       </Card>
       
-      <Card className="border-red-100">
-        <CardHeader>
-          <CardTitle className="text-red-900">Danger Zone</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
+      <Card className="border-red-200">
+         <CardHeader className="bg-red-50/50 border-b border-red-100">
+            <CardTitle className="text-red-700">Danger Zone</CardTitle>
+         </CardHeader>
+         <CardContent className="p-6 flex items-center justify-between">
             <div>
-              <p className="font-medium text-red-900">Delete Event</p>
-              <p className="text-xs text-red-700">This action cannot be undone.</p>
+               <h4 className="font-bold text-slate-900">Delete Event</h4>
+               <p className="text-sm text-slate-500">Permanently remove this event and all data.</p>
             </div>
-            <Button variant="destructive" size="sm">Delete</Button>
-          </div>
-        </CardContent>
+            <Button variant="destructive">Delete Event</Button>
+         </CardContent>
       </Card>
     </div>
   );
 };
 
-const CheckInKiosk = ({ onClose }: { onClose: () => void }) => {
-  const [search, setSearch] = useState('');
-  
+// --- Missing Components Definitions ---
+
+const EventCard = ({ event, onClick }: { event: ConferenceEvent; onClick: () => void }) => {
   return (
-    <div className="fixed inset-0 z-50 bg-white flex flex-col">
-      <div className="h-16 border-b flex items-center justify-between px-6 shrink-0">
-        <div className="font-bold text-xl flex items-center gap-2">
-          <ScanLine className="h-6 w-6 text-blue-600" /> Kiosk Mode
+    <Card 
+      onClick={onClick}
+      className="overflow-hidden cursor-pointer group hover:shadow-lg transition-all duration-300 border-slate-200"
+    >
+      <div className="h-40 bg-slate-100 relative overflow-hidden">
+        <img 
+          src={event.image} 
+          alt={event.name} 
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+        />
+        <div className="absolute top-4 right-4">
+          <Badge className="bg-white/90 text-slate-900 shadow-sm backdrop-blur-sm hover:bg-white">{event.status}</Badge>
         </div>
-        <Button variant="ghost" onClick={onClose}>Exit Kiosk</Button>
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 pt-12">
+           <p className="text-white font-bold text-lg leading-tight shadow-sm">{event.name}</p>
+        </div>
       </div>
-      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-50">
-        <div className="w-full max-w-2xl space-y-8">
-          <div className="text-center space-y-2">
-            <h1 className="text-4xl font-bold text-slate-900">Welcome to Global Impact 2025</h1>
-            <p className="text-slate-500 text-lg">Search for your name or scan your QR code to check in.</p>
+      <CardContent className="p-5 space-y-4">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm text-slate-600">
+            <CalendarIcon className="h-4 w-4 text-slate-400" />
+            <span>{formatDateRange(event.startDate, event.endDate)}</span>
           </div>
-          <Card className="shadow-xl border-slate-200">
-            <CardContent className="p-8 space-y-6">
-              <div className="relative">
-                <Search className="absolute left-4 top-4 h-6 w-6 text-slate-400" />
-                <Input 
-                  className="pl-12 h-14 text-lg bg-slate-50 border-slate-200" 
-                  placeholder="Start typing your name..."
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  autoFocus
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <Button className="h-32 flex flex-col gap-2 bg-blue-600 hover:bg-blue-700 text-white text-lg">
-                  <QrCode className="h-10 w-10" />
-                  Scan QR Code
-                </Button>
-                <Button variant="outline" className="h-32 flex flex-col gap-2 bg-white hover:bg-slate-50 text-slate-900 text-lg border-2">
-                  <User className="h-10 w-10" />
-                  Manual Check-In
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="flex items-center gap-2 text-sm text-slate-600">
+            <MapPin className="h-4 w-4 text-slate-400" />
+            <span className="truncate">{event.location}</span>
+          </div>
         </div>
-      </div>
-    </div>
+        
+        <div className="pt-4 border-t border-slate-100 grid grid-cols-2 gap-4">
+           <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registrants</p>
+              <div className="flex items-baseline gap-1">
+                 <span className="text-lg font-bold text-slate-900">{event.registrants}</span>
+                 <span className="text-xs text-slate-500">/ {event.capacity}</span>
+              </div>
+              <Progress value={(event.registrants / event.capacity) * 100} className="h-1 mt-1" />
+           </div>
+           <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Revenue</p>
+              <p className="text-lg font-bold text-slate-900">{formatCurrency(event.revenue)}</p>
+           </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const SpeakerCard = ({ speaker, onEdit }: { speaker: Speaker; onEdit: (s: Speaker) => void }) => {
+  return (
+    <Card className="overflow-hidden border-slate-200 hover:border-blue-200 transition-colors group">
+      <CardContent className="p-0">
+        <div className="p-6 pb-4 flex items-start justify-between">
+           <div className="flex gap-4">
+              <Avatar className="h-16 w-16 border-2 border-white shadow-sm">
+                 <AvatarImage src={speaker.avatar} />
+                 <AvatarFallback className="bg-slate-100 text-slate-600 font-bold">{speaker.firstName[0]}{speaker.lastName[0]}</AvatarFallback>
+              </Avatar>
+              <div className="space-y-1">
+                 <h3 className="font-bold text-lg text-slate-900 leading-none">{speaker.firstName} {speaker.lastName}</h3>
+                 <p className="text-sm text-slate-500">{speaker.jobTitle}</p>
+                 <p className="text-sm font-medium text-slate-700">{speaker.company}</p>
+              </div>
+           </div>
+           <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                 <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-700">
+                    <MoreHorizontal className="h-4 w-4" />
+                 </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                 <DropdownMenuItem onClick={() => onEdit(speaker)}>Edit Details</DropdownMenuItem>
+                 <DropdownMenuItem>Send Invite</DropdownMenuItem>
+                 <DropdownMenuSeparator />
+                 <DropdownMenuItem className="text-red-600">Remove Speaker</DropdownMenuItem>
+              </DropdownMenuContent>
+           </DropdownMenu>
+        </div>
+        
+        <div className="px-6 pb-6 pt-2 flex justify-between items-end">
+           <Badge variant="outline" className={cn("font-medium bg-white", getStatusColor(speaker.status))}>
+              {speaker.status}
+           </Badge>
+           <div className="flex gap-2">
+              {speaker.linkedin && (
+                 <a href={speaker.linkedin} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-[#0077b5] transition-colors"><Linkedin className="h-4 w-4" /></a>
+              )}
+              {speaker.twitter && (
+                 <a href={speaker.twitter} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-sky-500 transition-colors"><Twitter className="h-4 w-4" /></a>
+              )}
+              {speaker.website && (
+                 <a href={speaker.website} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-slate-700 transition-colors"><Globe className="h-4 w-4" /></a>
+              )}
+           </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const CreateEventDialog = ({ open, onOpenChange, onCreate }: { open: boolean; onOpenChange: (open: boolean) => void; onCreate: (e: ConferenceEvent) => void }) => {
+  const [formData, setFormData] = useState<Partial<ConferenceEvent>>({
+    name: '',
+    startDate: '',
+    endDate: '',
+    location: '',
+    capacity: 500,
+    goalRevenue: 50000,
+    status: 'Draft'
+  });
+
+  const handleSubmit = () => {
+    if (!formData.name || !formData.startDate || !formData.endDate) return;
+    
+    const newEvent: ConferenceEvent = {
+        id: `evt-${Date.now()}`,
+        name: formData.name || '',
+        slug: (formData.name || '').toLowerCase().replace(/ /g, '-'),
+        startDate: formData.startDate || '',
+        endDate: formData.endDate || '',
+        location: formData.location || '',
+        capacity: formData.capacity || 0,
+        goalRevenue: formData.goalRevenue || 0,
+        status: formData.status as EventStatus,
+        registrants: 0,
+        revenue: 0,
+        image: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&q=80&w=2000',
+        fundCode: 'NEW-EVT',
+        tracks: [],
+        rooms: [],
+        sessionTypes: [],
+        sessions: []
+    };
+    onCreate(newEvent);
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Create New Event</DialogTitle>
+          <DialogDescription>Setup the basics for your new conference or event.</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="space-y-2">
+            <Label>Event Name</Label>
+            <Input 
+                value={formData.name} 
+                onChange={e => setFormData({...formData, name: e.target.value})} 
+                placeholder="e.g. Annual Summit 2025" 
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+                <Label>Start Date</Label>
+                <Input type="date" value={formData.startDate} onChange={e => setFormData({...formData, startDate: e.target.value})} />
+            </div>
+            <div className="space-y-2">
+                <Label>End Date</Label>
+                <Input type="date" value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Location</Label>
+            <Input 
+                value={formData.location} 
+                onChange={e => setFormData({...formData, location: e.target.value})} 
+                placeholder="Venue Name or City" 
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+                <Label>Capacity</Label>
+                <Input type="number" value={formData.capacity} onChange={e => setFormData({...formData, capacity: parseInt(e.target.value)})} />
+            </div>
+            <div className="space-y-2">
+                <Label>Revenue Goal ($)</Label>
+                <Input type="number" value={formData.goalRevenue} onChange={e => setFormData({...formData, goalRevenue: parseInt(e.target.value)})} />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={handleSubmit} className="bg-slate-900 text-white">Create Event</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -1865,85 +2467,7 @@ export const Events = () => {
             <div className="max-w-6xl mx-auto">
               
               {activeTab === 'overview' && (
-                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-slate-500">Total Registrants</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-3xl font-bold text-slate-900">{selectedEvent.registrants}</div>
-                        <Progress value={(selectedEvent.registrants / selectedEvent.capacity) * 100} className="h-2 mt-3" />
-                        <p className="text-xs text-slate-500 mt-2">{selectedEvent.capacity - selectedEvent.registrants} spots remaining</p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-slate-500">Total Revenue</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-3xl font-bold text-emerald-600">{formatCurrency(selectedEvent.revenue)}</div>
-                        <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
-                          <TrendingUp className="h-3 w-3 text-emerald-500" /> +12% vs last year
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-slate-500">Check-In Status</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-3xl font-bold text-blue-600">
-                          {selectedEvent.status === 'Draft' ? 0 : 142}
-                        </div>
-                        <p className="text-xs text-slate-500 mt-2">Attendees currently on-site</p>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <Card className="h-full">
-                      <CardHeader>
-                        <CardTitle>Recent Activity</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-6 relative pl-4 border-l border-slate-100">
-                          {[1,2,3].map(i => (
-                            <div key={i} className="relative">
-                              <div className="absolute -left-[21px] top-1 h-3 w-3 rounded-full bg-blue-500 border-2 border-white shadow-sm" />
-                              <p className="text-sm font-medium text-slate-900">New registration: Bob Smith</p>
-                              <p className="text-xs text-slate-500">2 minutes ago</p>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card className="h-full bg-slate-900 text-white border-slate-800">
-                      <CardHeader>
-                        <CardTitle className="text-white">Quick Actions</CardTitle>
-                      </CardHeader>
-                      <CardContent className="grid grid-cols-2 gap-4">
-                        <Button variant="outline" className="h-20 flex-col bg-slate-800 border-slate-700 hover:bg-slate-700 hover:text-white border-dashed">
-                          <Mail className="h-6 w-6 mb-2" />
-                          Email Attendees
-                        </Button>
-                        <Button variant="outline" className="h-20 flex-col bg-slate-800 border-slate-700 hover:bg-slate-700 hover:text-white border-dashed">
-                          <Printer className="h-6 w-6 mb-2" />
-                          Print Badges
-                        </Button>
-                        <Button variant="outline" className="h-20 flex-col bg-slate-800 border-slate-700 hover:bg-slate-700 hover:text-white border-dashed">
-                          <Download className="h-6 w-6 mb-2" />
-                          Export List
-                        </Button>
-                        <Button variant="outline" className="h-20 flex-col bg-slate-800 border-slate-700 hover:bg-slate-700 hover:text-white border-dashed">
-                          <Settings className="h-6 w-6 mb-2" />
-                          Edit Event
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
+                  <EventOverview event={selectedEvent} />
               )}
 
               {/* Configuration Tab */}
