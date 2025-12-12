@@ -31,7 +31,8 @@ import { Automations } from './pages/admin/Automations';
 import { Mobilize } from './pages/admin/Mobilize';
 import { WebStudio } from './pages/admin/WebStudio';
 import { ContributionsHub } from './pages/admin/ContributionsHub';
-import { CRM } from './pages/admin/CRM'; // New Import
+import { CRM } from './pages/admin/CRM'; 
+import { Events } from './pages/admin/Events'; // New Import
 import { SignStudioDocuments } from './pages/admin/sign-studio/SignStudioDocuments';
 import { SignStudioNewDocument } from './pages/admin/sign-studio/SignStudioNewDocument';
 import { SignStudioTemplates } from './pages/admin/sign-studio/SignStudioTemplates';
@@ -137,12 +138,14 @@ const App: React.FC = () => {
           {/* Finance */}
           <Route path="contributions" element={<ContributionsHub />} />
 
-          {/* CRM Module (Updated) */}
+          {/* CRM Module */}
           <Route path="crm" element={<CRM />} />
+
+          {/* Events Module */}
+          <Route path="events" element={<Events />} />
 
           {/* Future Modules */}
           <Route path="report-studio" element={<PlaceholderPage title="Report Studio" />} />
-          <Route path="events" element={<PlaceholderPage title="Events & Conferences" />} />
           <Route path="member-care" element={<PlaceholderPage title="Member Care" />} />
           <Route path="settings" element={<PlaceholderPage title="Settings" />} />
         </Route>
