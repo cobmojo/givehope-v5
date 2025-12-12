@@ -30,7 +30,8 @@ import { PDFStudio } from './pages/admin/PDFStudio';
 import { Automations } from './pages/admin/Automations';
 import { Mobilize } from './pages/admin/Mobilize';
 import { WebStudio } from './pages/admin/WebStudio';
-import { ContributionsHub } from './pages/admin/ContributionsHub'; // Import new hub
+import { ContributionsHub } from './pages/admin/ContributionsHub';
+import { CRM } from './pages/admin/CRM'; // New Import
 import { SignStudioDocuments } from './pages/admin/sign-studio/SignStudioDocuments';
 import { SignStudioNewDocument } from './pages/admin/sign-studio/SignStudioNewDocument';
 import { SignStudioTemplates } from './pages/admin/sign-studio/SignStudioTemplates';
@@ -136,8 +137,10 @@ const App: React.FC = () => {
           {/* Finance */}
           <Route path="contributions" element={<ContributionsHub />} />
 
+          {/* CRM Module (Updated) */}
+          <Route path="crm" element={<CRM />} />
+
           {/* Future Modules */}
-          <Route path="crm" element={<PlaceholderPage title="CRM" />} />
           <Route path="report-studio" element={<PlaceholderPage title="Report Studio" />} />
           <Route path="events" element={<PlaceholderPage title="Events & Conferences" />} />
           <Route path="member-care" element={<PlaceholderPage title="Member Care" />} />

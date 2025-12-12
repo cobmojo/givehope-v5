@@ -1105,6 +1105,10 @@ export const ContributionsHub = () => {
         <SheetContent side="left" className="w-full sm:max-w-2xl p-0 gap-0 overflow-hidden bg-slate-50 shadow-2xl border-r border-slate-200 flex flex-col h-full">
           {selectedDonorProfile && (
             <>
+              <SheetHeader className="sr-only">
+                  <SheetTitle>Donor Profile: {selectedDonorProfile.name}</SheetTitle>
+                  <SheetDescription>Complete donor profile, stats, and history.</SheetDescription>
+              </SheetHeader>
               {/* Header */}
               <div className="relative bg-white border-b border-slate-200">
                  {/* Cover Area */}
